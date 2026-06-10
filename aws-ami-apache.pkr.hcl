@@ -52,7 +52,7 @@ build {
 
   provisioner "ansible" {
     playbook_file = "./provisioning/playbook.yml"
-    user          = "ec2-user"
+    user          = "ubuntu"
   }
 
   post-processor "manifest" {

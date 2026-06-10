@@ -1,0 +1,13 @@
+$ErrorActionPreference = "Stop"
+
+if (!(Test-Path "manifest.json")) {
+    throw "No se encontró manifest.json"
+}
+
+$manifest = Get-Content manifest.json | ConvertFrom-Json
+$artifact = $manifest.builds[-1].artifact_id
+$amiId = ($artifact -split ":")[1]
+
+terraform destroy `
+    -var="node_ami=$amiId" `
+    -auto-approve

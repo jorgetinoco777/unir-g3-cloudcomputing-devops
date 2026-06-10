@@ -1,0 +1,82 @@
+# ==========================================
+# Deploy AWS Infrastructure
+# Packer -> Terraform
+# ==========================================
+
+$ErrorActionPreference = "Stop"
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "1. Validando credenciales AWS"
+Write-Host "====================================="
+aws sts get-caller-identity --profile unir-account
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "2. Inicializando Packer"
+Write-Host "====================================="
+packer init .
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "3. Validando plantilla Packer"
+Write-Host "====================================="
+packer validate .
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "4. Construyendo AMI"
+Write-Host "====================================="
+packer build .
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "5. Obteniendo AMI generada"
+Write-Host "====================================="
+
+if (!(Test-Path "manifest.json")) {
+    throw "No se encontró manifest.json"
+}
+
+$manifest = Get-Content manifest.json | ConvertFrom-Json
+
+$artifact = $manifest.builds[-1].artifact_id
+
+# artifact_id = us-west-1:ami-xxxxxxxx
+$amiId = ($artifact -split ":")[1]
+
+Write-Host "AMI creada: $amiId" -ForegroundColor Green
+
+$manifest = Get-Content "manifest.json" | ConvertFrom-Json
+$artifactId = $manifest.builds[-1].artifact_id
+$node_ami = ($artifactId -split ":")[1]
+
+@"
+node_ami = "$node_ami"
+"@ | Set-Content terraform.tfvars
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "6. Inicializando Terraform"
+Write-Host "====================================="
+terraform init
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "7. Generando Plan"
+Write-Host "====================================="
+terraform plan `
+    -var="node_ami=$amiId" `
+    -out=tfplan
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "8. Desplegando Instancia"
+Write-Host "====================================="
+terraform apply -auto-approve tfplan
+
+Write-Host ""
+Write-Host "====================================="
+Write-Host "DESPLIEGUE FINALIZADO"
+Write-Host "AMI: $amiId"
+Write-Host "====================================="
