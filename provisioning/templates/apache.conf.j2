@@ -1,0 +1,13 @@
+<VirtualHost *:80>
+    ServerName localhost
+    DocumentRoot /var/www/unir
+
+    <Directory /var/www/unir>
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/unir_error.log
+    CustomLog ${APACHE_LOG_DIR}/unir_access.log combined
+</VirtualHost>

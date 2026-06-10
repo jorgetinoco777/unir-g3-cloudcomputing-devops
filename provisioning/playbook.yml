@@ -1,0 +1,71 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+
+    - name: Start Apache service
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+    
+    - name: Habilitar mod_rewrite
+      command: a2enmod rewrite
+      args:
+        creates: /etc/apache2/mods-enabled/rewrite.load
+
+    - name: Habilitar mod_headers
+      command: a2enmod headers
+      args:
+        creates: /etc/apache2/mods-enabled/headers.load
+
+    - name: Desplegar VirtualHost Apache
+      template:
+        src: apache.conf.j2
+        dest: /etc/apache2/sites-available/unir.conf
+    
+    - name: Habilitar sitio Unir
+      command: a2ensite unir.conf
+      args:
+        creates: /etc/apache2/sites-enabled/unir.conf
+
+    - name: Deshabilitar sitio por defecto Apache
+      command: a2dissite 000-default.conf
+
+    - meta: flush_handlers
+
+    - name: Crear directorio web
+      file:
+        path: /var/www/unir
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Copiar index.html a la raíz de Apache
+      copy:
+        src: files/index.html   # Ruta local en tu máquina de control
+        dest: /var/www/unir/index.html  # Ruta en el servidor remoto
+        owner: www-data         # Usuario propietario (en Debian/Ubuntu)
+        group: www-data
+        mode: '0644'
+
+    - name: Reiniciar Apache para aplicar cambios
+      service:
+        name: apache2
+        state: restarted
+
+  handlers:
+  - name: Reiniciar Apache
+    service:
+      name: apache2
+      state: restarted
